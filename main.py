@@ -8,7 +8,7 @@ DIMENSION = 8
 SQUARE_SIZE = HEIGHT // DIMENSION
 MAX_FPS = 15
 
-
+#hello
 
 piece_images = {}
 

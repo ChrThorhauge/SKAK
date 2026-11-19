@@ -76,6 +76,11 @@ def main():
             move_made = False
             valid_moves = gs.get_valid_moves()
 
+            if gs.checkmate:
+                print("Black wins" if gs.white_to_move else "White wins")
+            elif gs.stalemate:
+                print("Stalemate!")
+
 
         clock.tick(MAX_FPS)
         draw_game_state(screen, gs)

@@ -17,6 +17,12 @@ class Game_state():
         self.white_to_move = True
         self.move_log = []
 
+        self.checkmate = False
+        self.stalemate = False
+
+        self.white_king_location = (7,4)
+        self.black_king_location = (0,4)
+
         self.move_functions = {"p": self.get_pawn_moves, "R": self.get_rook_moves, "N": self.get_knight_moves,
                                "B": self.get_bishop_moves, "Q": self.get_queen_moves, "K": self.get_king_moves}
 
@@ -26,6 +32,11 @@ class Game_state():
         self.move_log.append(move)
         self.white_to_move = not self.white_to_move
 
+        if move.piece_moved == "wK":
+            self.white_king_location = (move.end_row, move.end_col)
+        elif move.piece_moved == "bK":
+            self.black_king_location = (move.end_row, move.end_col)
+
     def undo_move(self):
         if len(self.move_log) != 0:
             move = self.move_log.pop()
@@ -33,9 +44,90 @@ class Game_state():
             self.board[move.end_row][move.end_col] = move.piece_captured
             self.white_to_move = not self.white_to_move
 
+            if move.piece_moved == "wK":
+                self.white_king_location = (move.start_row, move.start_col)
+            elif move.piece_moved == "bK":
+                self.black_king_location = (move.start_row, move.start_col)
+
+
+    def in_check(self):
+        self.white_to_move = not self.white_to_move
+        result = self.check_checker() ## this guy always flips turns
+        self.white_to_move = not self.white_to_move
+        return result
+
 
     def get_valid_moves(self):
-        return self.get_all_moves()
+        moves = [m for m in self.get_all_moves() if self.is_legal(m)]
+
+        if len(moves) == 0:
+            if self.in_check() == True:
+                self.checkmate = True
+            else:
+                self.stalemate = True
+        else:
+
+            self.checkmate = False
+            self.stalemate = False
+        return moves
+    
+
+    def is_legal(self, move):
+        self.make_move(move)
+        in_check = self.check_checker()
+        self.undo_move()
+        return not in_check
+
+
+    def check_checker(self):
+        # This is called from is_legal and starts by making a move, we want the
+        # same color side to check where the king can go. 
+        self.white_to_move = not self.white_to_move
+
+        ally_color = "w" if self.white_to_move else "b"
+        enemy_color = "b" if self.white_to_move else "w"
+
+        # Keep track of the kings
+        if self.white_to_move:
+            king_row = self.white_king_location[0]
+            king_col = self.white_king_location[1]
+        else:
+            king_row = self.black_king_location[0]
+            king_col = self.black_king_location[1]
+
+        in_check = False
+
+       
+        #Let us check moves for minor pieces + king
+
+
+        tests = [(self.get_rook_moves, "RQ"),
+                 (self.get_bishop_moves, "BQ"),
+                 (self.get_knight_moves, "N"),
+                 (self.get_king_moves, "K")]
+        
+        for get_move_functions, attackers in tests:
+            moves = []
+            get_move_functions(king_row, king_col, moves)
+            for m in moves:
+                if m.piece_captured[0] == enemy_color and m.piece_captured[1] in attackers:
+                    in_check = True
+
+
+        #Check for pawns
+
+        pawn_row = king_row -1 if self.white_to_move else king_row + 1
+        if 0 < pawn_row < 7:
+            for dc in (-1,1):
+                pawn_col = king_col + dc
+                if 0 <= pawn_col <= 7 and self.board[pawn_row][pawn_col] == enemy_color + "p":
+                    in_check = True
+
+
+        self.white_to_move = not self.white_to_move
+        return in_check
+
+        
 
 
 
